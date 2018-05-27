@@ -18,6 +18,7 @@
 #include <Oscil.h>
 #include <AudioDelayFeedback.h>
 #include <StateVariable.h>
+#include <LowPassFilter.h>
 
 #include <tables/sin256_int8.h>
 #include <tables/triangle512_int8.h>
@@ -26,7 +27,7 @@
 #include <tables/square_no_alias512_int8.h>
 #include <tables/brownnoise8192_int8.h>
 
-#include <tables/uphasor256_uint8.h>
+//#include <tables/uphasor256_uint8.h>
 #include <tables/whitenoise8192_int8.h>
 
 #include "FalangeHardware.h"
@@ -36,24 +37,47 @@ void updateControl();
 int updateAudio();
 //End of Auto generated function prototypes by Atmel Studio
 
-#define CONTROL_RATE 1024
+#define CONTROL_RATE 64
 
-
+// Synth class objects
 AudioDelayFeedback <256> mDelay; //max delay time = 256/16384 = 15.625ms
-Q8n24 delaySize = 100; // in samples (or cells as is called in Mozzi)
+LowPassFilter smooth; 
+Oscil <WHITENOISE8192_NUM_CELLS, AUDIO_RATE> lfo(WHITENOISE8192_DATA); // lfo to modulate delay size
+//Oscil <UPHASOR256_NUM_CELLS, AUDIO_RATE> sah(UPHASOR256_DATA); // used to sample&hold
+// Synth variables 
+Q16n16 delaySize = 255; // in samples (max=256) 
+float dlySizeParam; // delay size set by the knob
+Q8n0 smoothFreq; 
 
 void setup(){
   startMozzi(CONTROL_RATE);
   mDelay.setFeedbackLevel(-111); // can be -128 to 127
+  smooth.setResonance(32);
+  Serial.begin(9600);
+  
+  pinMode(LFORANGE, INPUT);
+  pinMode(SIZERANGE, INPUT);
 }
 
 
 void updateControl(){
+	smoothFreq = mozziAnalogRead(SMOOTH) >> 2; // 0 to 255 is 0~8192Hz
+	smooth.setCutoffFreq( smoothFreq );
+	lfo.setFreq( mozziAnalogRead(LFOFREQ) ); // 0 to 1024
+	dlySizeParam = mozziAnalogRead(4) / 1023.f; // 0.0 to 1.0
+	mDelay.setFeedbackLevel( (mozziAnalogRead(FEEDBACK) >> 2) -128 ); // -128 to 127
+	
+	Serial.println(dlySizeParam);
 }
 
 
 int updateAudio(){
+  // read audio input 
   int16_t inSig = getAudioInput() - 512; // range from 0-1023 to -512 to 511
+  
+  // calc delay-size
+  if(smoothFreq > 0) delaySize = smooth.next( ((lfo.next() + 255) << 1)) * dlySizeParam;
+  else delaySize = ((long)(lfo.next() + 255) << 11) * dlySizeParam; // disable smooth for granular effects
   
   // output range must be between -8192 and 8191 (14-bit) 
   return (inSig + mDelay.next(inSig, delaySize)) << 4; 
