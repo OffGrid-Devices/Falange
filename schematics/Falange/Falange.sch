@@ -20310,7 +20310,7 @@ Source: http://products.nichicon.co.jp/en/pdf/XJA043/e-ud.pdf</description>
 <wire x1="27.94" y1="35.56" x2="27.94" y2="25.4" width="0.1524" layer="91"/>
 </segment>
 </net>
-<net name="N$1" class="0">
+<net name="PWRTIP" class="0">
 <segment>
 <pinref part="D1" gate="1" pin="C"/>
 <wire x1="48.26" y1="162.56" x2="48.26" y2="167.64" width="0.1524" layer="91"/>
@@ -20325,7 +20325,7 @@ Source: http://products.nichicon.co.jp/en/pdf/XJA043/e-ud.pdf</description>
 <junction x="35.56" y="167.64"/>
 </segment>
 </net>
-<net name="N$3" class="0">
+<net name="PWRSLV" class="0">
 <segment>
 <pinref part="D3" gate="1" pin="A"/>
 <wire x1="71.12" y1="157.48" x2="71.12" y2="152.4" width="0.1524" layer="91"/>
