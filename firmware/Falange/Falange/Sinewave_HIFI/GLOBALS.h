@@ -44,7 +44,6 @@
 #define MRND1 6		// updateAudio random bitshift
 #define MRND2 7		// updateControl random bitshift
 // filter
-#define LOWESTFREQ 20
-#define HIGHESTFREQ 4096
-
+#define LOWESTFREQ 128
+#define HIGHESTFREQ 3072
 #endif /* GLOBALS_H_ */

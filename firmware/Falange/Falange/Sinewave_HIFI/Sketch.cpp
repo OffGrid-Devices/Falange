@@ -36,9 +36,9 @@ void lightled(int8_t sig);
 /************************************************************************/
 Oscil <WHITENOISE8192_NUM_CELLS, AUDIO_RATE> testosc(WHITENOISE8192_DATA);
 Oscil <SIN256_NUM_CELLS, AUDIO_RATE> lfo(SIN256_DATA);
-//LowPassFilter lopass;
-StateVariable <LOWPASS> lopass; // can be LOWPASS, BANDPASS, HIGHPASS or NOTCH
-StateVariable <HIGHPASS> hipass; // can be LOWPASS, BANDPASS, HIGHPASS or NOTCH
+//LowPassFilter lp;
+StateVariable <LOWPASS> lp; // can be LOWPASS, BANDPASS, HIGHPASS or NOTCH
+StateVariable <HIGHPASS> hp; // can be LOWPASS, BANDPASS, HIGHPASS or NOTCH
 AudioDelayFeedback <256> fbkDelay;
 /************************************************************************/
 /* VARIABLES                                                            */
@@ -46,8 +46,8 @@ AudioDelayFeedback <256> fbkDelay;
 // FILTER
 bool filtermode = 0; // 0=LP, 1=HP
 Q16n0 freq; // cutoff
-const IntMap freqMap(0, 1023, LOWESTFREQ, HIGHESTFREQ); // filter freq mapping
-int8_t lplevel, hplevel; // used to crossfade between LP & HP
+Q0n8 res;
+const IntMap freqMap(0, 255, LOWESTFREQ, HIGHESTFREQ); // filter freq mapping
 
 // DELAY
 bool delayplace = 0; // 0 = post fx+filter, 1 = pre fx+filter
@@ -74,8 +74,8 @@ void setup(){
 	// LFO
 	testosc.setFreq(2); // set the frequency
 	// FILTER
-	lopass.setResonance(127); // 0 to 255, 255 is the "sharp" end
-	hipass.setResonance(127); // 0 to 255, 0 is the "sharp" end
+	lp.setResonance(127); // 0 to 255, 255 is the "sharp" end
+	hp.setResonance(127); // 0 to 255, 0 is the "sharp" end
 	// DELAY
 	fbkDelay.setFeedbackLevel(-111); // can be -128 to 127
 	// LFO
@@ -103,13 +103,12 @@ void updateControl(){
 	// FILTER
 	delayplace = bit_get(PIND, BIT(4));		// read SWITCH2
 	filtermode = bit_get(PIND, BIT(7));		// read SWITCH2
-	freq =  mozziAnalogRead(KNOB4);			// read knob
-	hipass.setCentreFreq( freqMap(freq) );	// set HP freq
+	freq =  mozziAnalogRead(KNOB4) >> 2;			// read knob
+	hp.setCentreFreq( freqMap(freq) );	// set HP freq
 	//lopass.setCutoffFreq( freq >> 2 );		// set LP freq
-	lopass.setCentreFreq( freqMap(freq) );
-	hplevel = freq >> 3; // 0 to 127
-	lplevel = 127 - hplevel;
-	
+	lp.setCentreFreq( freqMap(freq) );
+	res = 255 - (mozziAnalogRead(KNOB3) >> 2);
+	lp.setResonance( res );
 	
 	// DELAY
 	delaytime = (1023 - (mozziAnalogRead(KNOB1) ) >> 2) + 1;
@@ -128,31 +127,28 @@ void updateControl(){
 /************************************************************************/
 int updateAudio(){
 	// LED
-	lfosig = lfo.next();
-	lightled( lfosig );
+	/*lfosig = lfo.next();
+	lightled( lfosig );*/
 	
-	int outsig = testosc.next() >> 2; // divide by half to avoid svf distortion on high Q
+	int outsig = testosc.next()>>1; // divide by half to avoid svf distortion on high Q
 	
-	if(delayplace){ // FX > Filter > Delay
-		if (filtermode) outsig = hipass.next(outsig);
-		else outsig = lopass.next(outsig);
+	/*if(delayplace){ // FX > Filter > Delay
+		if (filtermode) outsig = hipass.next(outsig>>1);
+		else outsig = lopass.next(outsig>>1);
 		outsig = outsig + fbkDelay.next(outsig, delaytime);
 	}
 	else{ // Delay > FX > Filter
 		// signal to filter should be from -128 to 127 (actually 244 >> 1)
 		outsig = outsig + fbkDelay.next(outsig, delaytime);
-		if (filtermode) outsig = hipass.next(outsig);
-		else outsig = lopass.next(outsig);
+		if (filtermode) outsig = hipass.next(outsig>>2);
+		else outsig = lopass.next(outsig>>2);
 	}
 	// output must be from -8192 to 8191
-	return outsig << 5;	
-	
-	/*
-	int testsig = testosc.next() >> 2; // -32 to 31 
-	int lpsig = lopass.next(testsig) * lplevel;
-	int hpsig = hipass.next(testsig) * hplevel;
-	return (lpsig + hpsig);
+	return outsig << 6;	
 	*/
+	
+	// output must be from -8192 to 8191
+	return lp.next(outsig) << 4;
 	
 }
 
