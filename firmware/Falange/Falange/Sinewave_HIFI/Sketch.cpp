@@ -43,17 +43,19 @@ AudioDelayFeedback <256> fbkDelay;
 /************************************************************************/
 /* VARIABLES                                                            */
 /************************************************************************/
+// FILTER
 bool filtermode = 0; // 0=LP, 1=HP
-bool filterplace = 0; // 1 = post delay, 0 = pre delay 
 Q16n0 freq; // cutoff
-const IntMap freqMap(0,1023,20,4096); // HP freq mapping
+const IntMap freqMap(0, 1023, LOWESTFREQ, HIGHESTFREQ); // filter freq mapping
+int8_t lplevel, hplevel; // used to crossfade between LP & HP
 
+// DELAY
+bool delayplace = 0; // 0 = post fx+filter, 1 = pre fx+filter
 uint16_t delaytime;
-
 int8_t amount; 
-
 int8_t lfosig; 
 
+// DISTORTION
 uint8_t distortion_mode; // 0 to 7 (see SYNTH distortion modes in GLOBALS.h)
 uint8_t pot_samples[4];
 uint8_t counter = 0; 
@@ -99,12 +101,15 @@ void updateControl(){
 	} 
 		 
 	// FILTER
-	filterplace = bit_get(PIND, BIT(4));		// read SWITCH2
+	delayplace = bit_get(PIND, BIT(4));		// read SWITCH2
 	filtermode = bit_get(PIND, BIT(7));		// read SWITCH2
 	freq =  mozziAnalogRead(KNOB4);			// read knob
 	hipass.setCentreFreq( freqMap(freq) );	// set HP freq
 	//lopass.setCutoffFreq( freq >> 2 );		// set LP freq
 	lopass.setCentreFreq( freqMap(freq) );
+	hplevel = freq >> 3; // 0 to 127
+	lplevel = 127 - hplevel;
+	
 	
 	// DELAY
 	delaytime = (1023 - (mozziAnalogRead(KNOB1) ) >> 2) + 1;
@@ -122,27 +127,33 @@ void updateControl(){
 /* UPDATE AUDIO                                                         */
 /************************************************************************/
 int updateAudio(){
-	lfosig = lfo.next();
 	// LED
+	lfosig = lfo.next();
 	lightled( lfosig );
 	
 	int outsig = testosc.next() >> 2; // divide by half to avoid svf distortion on high Q
 	
-	if(filterplace){ // filter post delay
+	if(delayplace){ // FX > Filter > Delay
+		if (filtermode) outsig = hipass.next(outsig);
+		else outsig = lopass.next(outsig);
+		outsig = outsig + fbkDelay.next(outsig, delaytime);
+	}
+	else{ // Delay > FX > Filter
 		// signal to filter should be from -128 to 127 (actually 244 >> 1)
 		outsig = outsig + fbkDelay.next(outsig, delaytime);
 		if (filtermode) outsig = hipass.next(outsig);
 		else outsig = lopass.next(outsig);
 	}
-	else{ // filter pre delay
-		if (filtermode) outsig = hipass.next(outsig);
-		else outsig = lopass.next(outsig);
-		outsig = outsig + fbkDelay.next(outsig, delaytime);
-	}
+	// output must be from -8192 to 8191
+	return outsig << 5;	
 	
+	/*
+	int testsig = testosc.next() >> 2; // -32 to 31 
+	int lpsig = lopass.next(testsig) * lplevel;
+	int hpsig = hipass.next(testsig) * hplevel;
+	return (lpsig + hpsig);
+	*/
 	
-	// output must be from -8192 to 8191	
-	return outsig << 4;
 }
 
 
