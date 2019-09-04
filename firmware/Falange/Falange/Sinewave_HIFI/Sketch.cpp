@@ -28,13 +28,14 @@
 void updateControl();
 int updateAudio();
 
-void lightled();
+void lightled(int8_t sig);
 //End of Auto generated function prototypes by Atmel Studio
 
 /************************************************************************/
 /* OBJECTS                                                              */
 /************************************************************************/
 Oscil <WHITENOISE8192_NUM_CELLS, AUDIO_RATE> testosc(WHITENOISE8192_DATA);
+Oscil <SIN256_NUM_CELLS, AUDIO_RATE> lfo(SIN256_DATA);
 //LowPassFilter lopass;
 StateVariable <LOWPASS> lopass; // can be LOWPASS, BANDPASS, HIGHPASS or NOTCH
 StateVariable <HIGHPASS> hipass; // can be LOWPASS, BANDPASS, HIGHPASS or NOTCH
@@ -50,6 +51,8 @@ const IntMap freqMap(0,1023,20,4096); // HP freq mapping
 uint16_t delaytime;
 
 int8_t amount; 
+
+int8_t lfosig; 
 
 uint8_t distortion_mode; // 0 to 7 (see SYNTH distortion modes in GLOBALS.h)
 uint8_t pot_samples[4];
@@ -73,6 +76,8 @@ void setup(){
 	hipass.setResonance(127); // 0 to 255, 0 is the "sharp" end
 	// DELAY
 	fbkDelay.setFeedbackLevel(-111); // can be -128 to 127
+	// LFO
+	
 		
 }
 
@@ -108,14 +113,19 @@ void updateControl(){
 	// MOD AMOUNT 
 	amount = (mozziAnalogRead(KNOB3) >> 2) - 128;
 	fbkDelay.setFeedbackLevel(amount); // can be -128 to 127
+	// LFO
+	float rate = ipow( mozziAnalogRead(KNOB2), 2) / 8176.0078125;
+	lfo.setFreq(rate);
 	
-	// LED
-	lightled();
 }
 /************************************************************************/
 /* UPDATE AUDIO                                                         */
 /************************************************************************/
 int updateAudio(){
+	lfosig = lfo.next();
+	// LED
+	lightled( lfosig );
+	
 	int outsig = testosc.next() >> 2; // divide by half to avoid svf distortion on high Q
 	
 	if(filterplace){ // filter post delay
@@ -143,11 +153,11 @@ void loop(){
 /************************************************************************/
 /* OTHER FUNCTIONS                                                      */
 /************************************************************************/
-void lightled(){
+void lightled(int8_t sig){
 	// METHOD 1
-	/*if (filtermode) PORTD |=(1<<3);
-	else PORTD &= ~(1 << 3);*/
+	if (sig > 0) PORTD |=(1<<3);
+	else PORTD &= ~(1 << 3);
 	
 	// METHOD 2
-	PORTD = (filtermode<<PD3);
+	//PORTD = (filtermode<<PD3);
 }
