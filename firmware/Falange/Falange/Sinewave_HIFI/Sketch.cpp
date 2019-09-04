@@ -155,9 +155,12 @@ void loop(){
 /************************************************************************/
 void lightled(int8_t sig){
 	// METHOD 1
-	if (sig > 0) PORTD |=(1<<3);
-	else PORTD &= ~(1 << 3);
+	(sig > 0) ? PORTD |=(1<<3) : PORTD &= ~(1 << 3);
 	
 	// METHOD 2
+	/*if (sig > 0) PORTD |=(1<<3);
+	else PORTD &= ~(1 << 3);*/
+	
+	// METHOD 3
 	//PORTD = (filtermode<<PD3);
 }
