@@ -32,6 +32,6 @@
 #define KNOB5 6 // LFO Wave
 #define KNOB6 7 // Distotion/FX types
 
-
+// SYNTH 
 
 #endif /* GLOBALS_H_ */

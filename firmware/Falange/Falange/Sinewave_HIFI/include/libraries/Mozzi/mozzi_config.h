@@ -68,7 +68,7 @@ Whether or not to use audio input.
 Put \#define USE_AUDIO_INPUT false in Mozzi/mozzi_config.h to enable audio input on analog pin AUDIO_INPUT_PIN,
 otherwise make it false, to save resources.
 */
-#define USE_AUDIO_INPUT true
+#define USE_AUDIO_INPUT false
 
 
 

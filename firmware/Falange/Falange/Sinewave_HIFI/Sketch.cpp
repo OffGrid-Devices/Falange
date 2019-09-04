@@ -5,8 +5,10 @@
 #include "GLOBALS.h" 
  
 #include <MozziGuts.h>
+#include <IntMap.h>
 #include <Oscil.h> 
 #include <StateVariable.h>
+#include <LowPassFilter.h>
 
 #include <tables/sin256_int8.h>
 #include <tables/triangle512_int8.h>
@@ -27,24 +29,28 @@ void lightled();
 
 
 Oscil <WHITENOISE8192_NUM_CELLS, AUDIO_RATE> testosc(WHITENOISE8192_DATA);
-StateVariable <LOWPASS> lopass; // can be LOWPASS, BANDPASS, HIGHPASS or NOTCH
+LowPassFilter lopass;
+//StateVariable <LOWPASS> lopass; // can be LOWPASS, BANDPASS, HIGHPASS or NOTCH
 StateVariable <HIGHPASS> hipass; // can be LOWPASS, BANDPASS, HIGHPASS or NOTCH
 
 bool filtermode = 0; 
+Q16n0 freq; 
+const IntMap freqMap(0,1023,20,4096);
+
 
 void setup(){
 	startMozzi(); // uses the default control rate of 64, defined in mozzi_config.h  
+	setupFastAnalogRead(FASTEST_ADC);
+	
 	// HARDWARE
 	pinMode(SWITCH1, INPUT);
 	pinMode(SWITCH2, INPUT);
 	pinMode(LED, OUTPUT);
 	// LFO
-	testosc.setFreq(440); // set the frequency
+	testosc.setFreq(2); // set the frequency
 	// FILTER
-	lopass.setResonance(255); // 0 to 255, 0 is the "sharp" end
-	lopass.setCentreFreq(400);
-	hipass.setResonance(255); // 0 to 255, 0 is the "sharp" end
-	hipass.setCentreFreq(400);
+	lopass.setResonance(127); // 0 to 255, 0 is the "sharp" end
+	hipass.setResonance(127); // 0 to 255, 0 is the "sharp" end
 }
 
 void lightled(){
@@ -57,7 +63,14 @@ void lightled(){
 }
 
 void updateControl(){
-	filtermode = bit_get(PIND, BIT(7));
+	
+	filtermode = bit_get(PIND, BIT(7)); // read SWITCH2
+	
+	
+	freq =  mozziAnalogRead(KNOB4);
+	hipass.setCentreFreq( freqMap(freq) );
+	lopass.setCutoffFreq( freq >> 2 ); 
+	 
 	
 	//lightled();
 }
@@ -65,13 +78,13 @@ void updateControl(){
 
 
 int updateAudio(){
-	// output must be from -8192 to 8191
-	int outsig;
-	 	
-	if (filtermode) outsig = hipass.next(testosc.next());
-	else outsig = lopass.next(testosc.next()); 
+	int outsig = testosc.next() >> 1; // divide by half to avoid svf distortion on high Q
 	
-	return outsig <<6;
+	if (filtermode) outsig = hipass.next(outsig);
+	else outsig = lopass.next(outsig); 
+	
+	// output must be from -8192 to 8191	
+	return outsig << 4;
 }
 
 
