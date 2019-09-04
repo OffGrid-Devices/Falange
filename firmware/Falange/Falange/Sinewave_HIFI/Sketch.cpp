@@ -35,7 +35,8 @@ void lightled();
 /* OBJECTS                                                              */
 /************************************************************************/
 Oscil <WHITENOISE8192_NUM_CELLS, AUDIO_RATE> testosc(WHITENOISE8192_DATA);
-LowPassFilter lopass;
+//LowPassFilter lopass;
+StateVariable <LOWPASS> lopass; // can be LOWPASS, BANDPASS, HIGHPASS or NOTCH
 StateVariable <HIGHPASS> hipass; // can be LOWPASS, BANDPASS, HIGHPASS or NOTCH
 AudioDelayFeedback <256> fbkDelay;
 /************************************************************************/
@@ -70,6 +71,8 @@ void setup(){
 	// FILTER
 	lopass.setResonance(127); // 0 to 255, 255 is the "sharp" end
 	hipass.setResonance(127); // 0 to 255, 0 is the "sharp" end
+	// DELAY
+	fbkDelay.setFeedbackLevel(-111); // can be -128 to 127
 		
 }
 
@@ -95,10 +98,11 @@ void updateControl(){
 	filtermode = bit_get(PIND, BIT(7));		// read SWITCH2
 	freq =  mozziAnalogRead(KNOB4);			// read knob
 	hipass.setCentreFreq( freqMap(freq) );	// set HP freq
-	lopass.setCutoffFreq( freq >> 2 );		// set LP freq
+	//lopass.setCutoffFreq( freq >> 2 );		// set LP freq
+	lopass.setCentreFreq( freqMap(freq) );
 	
 	// DELAY
-	delaytime = (mozziAnalogRead(KNOB1) >> 2) + 1;
+	delaytime = (1023 - (mozziAnalogRead(KNOB1) ) >> 2) + 1;
 	//fbkDelay.setDelayTimeCells(delaytime);
 	
 	// MOD AMOUNT 

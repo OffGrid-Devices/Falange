@@ -33,7 +33,7 @@
 #define KNOB6 7		// Distotion/FX types
 
 // SYNTH 
-#define CONTROL_RATE 512
+#define CONTROL_RATE 64
 // distortion modes
 #define MOFF 0		// off 
 #define MAND 1		// AND &
