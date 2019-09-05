@@ -28,11 +28,19 @@ int distortions(int sig, uint8_t dist);
 /* OBJECTS                                                              */
 /************************************************************************/
 Oscil <WHITENOISE8192_NUM_CELLS, AUDIO_RATE> testosc(WHITENOISE8192_DATA);
-Oscil <SIN256_NUM_CELLS, AUDIO_RATE> lfo(SIN256_DATA);
+Oscil <SIN256_NUM_CELLS, AUDIO_RATE> lfo1(SIN256_DATA);
+Oscil <TRIANGLE512_NUM_CELLS, AUDIO_RATE> lfo2(TRIANGLE512_DATA);
+Oscil <SAW256_NUM_CELLS, AUDIO_RATE> lfo3(SAW256_DATA);
+Oscil <WAVESHAPE_SIGMOID_NUM_CELLS, AUDIO_RATE> lfo4(WAVESHAPE_SIGMOID_DATA);
+Oscil <SQUARE_NO_ALIAS512_NUM_CELLS, AUDIO_RATE> lfo5(SQUARE_NO_ALIAS512_DATA);
+Oscil <WHITENOISE8192_NUM_CELLS, AUDIO_RATE> lfo6(WHITENOISE8192_DATA);
+Oscil <UPHASOR256_NUM_CELLS, AUDIO_RATE> sah(UPHASOR256_DATA); // used for sample&hold
+
 //LowPassFilter lp;
 StateVariable <LOWPASS> lp; // can be LOWPASS, BANDPASS, HIGHPASS or NOTCH
 StateVariable <HIGHPASS> hp; // can be LOWPASS, BANDPASS, HIGHPASS or NOTCH
 AudioDelayFeedback <MAXDELAY> fbkDelay;
+
 /************************************************************************/
 /* VARIABLES                                                            */
 /************************************************************************/
@@ -52,6 +60,10 @@ int8_t lfosig;
 // DISTORTION
 uint8_t distortion_mode; // 0 to 7 (see SYNTH distortion modes in GLOBALS.h)
 uint8_t rnd; 
+
+// LFO
+uint8_t lfowave = 0; 
+uint8_t lforate; 
 
 /************************************************************************/
 /* SETUP                                                                */
@@ -94,7 +106,7 @@ void updateControl(){
 	
 	// DELAY
 	//delayplace = bit_get(PIND, BIT(4));		// read SWITCH1
-	delaytime = (1023 - (mozziAnalogRead(KNOB1) ) >> 2) + 1;
+	delaytime = (1023 - (mozziAnalogRead(KNOB1) ) >> 2);
 	
 	// MOD AMOUNT 
 	amount = (mozziAnalogRead(KNOB3) >> 2) - 128;
@@ -103,22 +115,36 @@ void updateControl(){
 	// LFO
 	//float rate = ipow( mozziAnalogRead(KNOB2), 2) / 8176.0078125;
 	//lfo.setFreq( rate );
-	lfo.setFreq( mozziAnalogRead(KNOB2) >> 4);
-	
-	// DISTORTION 
+	lforate = mozziAnalogRead(KNOB2) >> 4;
+	lfowave = mozziAnalogRead(KNOB5) >> 7;  
+	lfo1.setFreq(lforate);
+	lfo2.setFreq(lforate);
+	lfo3.setFreq(lforate);
+	lfo4.setFreq(lforate);
+	lfo5.setFreq(lforate);
+	lfo6.setFreq(1);
+	lfo6.setPhase(rand(128));
+	sah.setFreq(lforate);
 	
 }
 /************************************************************************/
 /* UPDATE AUDIO                                                         */
 /************************************************************************/
 int updateAudio(){
-	// LED
-	lfosig = lfo.next();
-	lightled( lfosig );
+	// LFO 
+	lfosig = lfo1.next(); 
+	lightled( lfosig ); // LED
+	(lfowave < 1) ? ( lfosig = lfosig ) :
+	(lfowave < 2) ? ( lfosig = lfo2.next() ) :
+	(lfowave < 3) ? ( lfosig = lfo3.next() ) :
+	(lfowave < 4) ? ( lfosig = lfo4.next() ) :
+	(lfowave < 5) ? ( lfosig = lfo5.next() ) :
+	(lfowave < 6) ? ( (sah.next()<1) ? (lfosig = lfo5.next()):(lfosig = lfosig)) : (lfosig = lfosig);
+	
 	
 	int outsig = testosc.next()>>1; // divide by half to avoid svf distortion on high Q
 	
-	outsig = (outsig + fbkDelay.next(outsig, delaytime)) >> 1;
+	(delaytime > 0) ? (outsig = (outsig + fbkDelay.next(outsig, delaytime)) >> 1) : outsig;
 	
 	(filtermode < 1) ? (outsig = lp.next(outsig)) : (outsig = hp.next(outsig));
 	

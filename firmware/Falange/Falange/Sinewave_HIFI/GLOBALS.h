@@ -36,11 +36,11 @@
 #include <tables/sin256_int8.h>
 #include <tables/triangle512_int8.h>
 #include <tables/saw256_int8.h>
-#include <tables/phasor256_int8.h>
+#include <tables/waveshape_sigmoid_int8.h>
 #include <tables/square_no_alias512_int8.h>
-#include <tables/brownnoise8192_int8.h>
-#include <tables/uphasor256_uint8.h>
 #include <tables/whitenoise8192_int8.h>
+#include <tables/uphasor256_uint8.h> // for the s&h
+
 // SYNTH 
 #define CONTROL_RATE 64
 #define MAXDELAY 256 // ArduinoProMini max delay = 256 samples
