@@ -10,6 +10,7 @@
 
 #include <MozziGuts.h>
 #include <IntMap.h>
+#include <mozzi_rand.h>
 #include <Oscil.h> 
 #include <StateVariable.h>
 #include <LowPassFilter.h>
@@ -59,6 +60,7 @@ int8_t lfosig;
 
 // DISTORTION
 uint8_t distortion_mode; // 0 to 7 (see SYNTH distortion modes in GLOBALS.h)
+uint8_t rnd; 
 
 /************************************************************************/
 /* SETUP                                                                */
@@ -96,22 +98,25 @@ void updateControl(){
 	
 	lp.setCentreFreq( lpFreqMap(freq) );	// set LP freq
 	hp.setCentreFreq( hpFreqMap(freq) );	// set HP freq
-	res = 255 - (mozziAnalogRead(KNOB3) >> 2);// read pot
+	/*res = 255 - (mozziAnalogRead(KNOB3) >> 2);// read pot
 	lp.setResonance( res );			// set LP res
-	hp.setResonance( hpResMap(res) );		// set HP res
+	hp.setResonance( hpResMap(res) );		// set HP res */
 	
 	
 	// DELAY
 	delayplace = bit_get(PIND, BIT(4));		// read SWITCH1
 	delaytime = (1023 - (mozziAnalogRead(KNOB1) ) >> 2) + 1;
-	//fbkDelay.setDelayTimeCells(delaytime);
+	fbkDelay.setDelayTimeCells(delaytime);
 	
 	// MOD AMOUNT 
 	amount = (mozziAnalogRead(KNOB3) >> 2) - 128;
 	fbkDelay.setFeedbackLevel(amount); // can be -128 to 127
 	// LFO
-	float rate = ipow( mozziAnalogRead(KNOB2), 2) / 8176.0078125;
-	lfo.setFreq(rate);
+	//float rate = ipow( mozziAnalogRead(KNOB2), 2) / 8176.0078125;
+	//lfo.setFreq( rate );
+	lfo.setFreq( mozziAnalogRead(KNOB2) >> 4);
+	// DISTORTION 
+	if(distortion_mode == MRND2) rnd = rand(16); 
 	
 }
 /************************************************************************/
@@ -119,29 +124,51 @@ void updateControl(){
 /************************************************************************/
 int updateAudio(){
 	// LED
-	/*lfosig = lfo.next();
-	lightled( lfosig );*/
+	lfosig = lfo.next();
+	lightled( lfosig );
 	
 	int outsig = testosc.next()>>1; // divide by half to avoid svf distortion on high Q
 	
-	/*if(delayplace){ // FX > Filter > Delay
-		if (filtermode) outsig = hipass.next(outsig>>1);
-		else outsig = lopass.next(outsig>>1);
-		outsig = outsig + fbkDelay.next(outsig, delaytime);
-	}
-	else{ // Delay > FX > Filter
-		// signal to filter should be from -128 to 127 (actually 244 >> 1)
-		outsig = outsig + fbkDelay.next(outsig, delaytime);
-		if (filtermode) outsig = hipass.next(outsig>>2);
-		else outsig = lopass.next(outsig>>2);
-	}
-	// output must be from -8192 to 8191
-	return outsig << 6;	
-	*/
+	outsig = lp.next(outsig);
+
+	// faster "switch statement" (cascading if then else)
+	(distortion_mode < MAND) ? (outsig = outsig) : // OFF
+	(distortion_mode < MOR) ? outsig = (outsig & -lfosig) : // AND 
+	(distortion_mode < MXOR) ? outsig = (outsig | lfosig) : // OR
+	(distortion_mode < MNOT) ? outsig = (outsig ^ lfosig) : // XOR
+	(distortion_mode < MSHIFT) ? outsig = (outsig + ~lfosig) : // NOT
+	(distortion_mode < MRND1) ? outsig = (outsig << lfosig) : // BITSHIFT
+	(distortion_mode < MRND2) ? outsig = (outsig << rnd) : outsig = ( outsig << rand(16) ); // CTRL RATE else AUDIO RATE
+	/*switch(distortion_mode){
+		case MAND:
+		outsig = outsig & -lfosig;
+		break;
+		case MOR:
+		outsig = outsig | lfosig;
+		break;
+		case MXOR:
+		outsig = outsig ^ lfosig;
+		break;
+		case MNOT:
+		outsig = outsig + ~lfosig;
+		break;
+		case MSHIFT:
+		outsig = outsig << lfosig;
+		break;
+		case MRND2:
+		outsig = outsig << rand(250);
+		break;
+		case MRND1:
+		outsig = outsig << rnd;
+		break;
+		
+		default:
+		break;
+	}*/
 	
+	outsig = ( outsig + fbkDelay.next( outsig ) ) >> 1;
+	return outsig << 6; // <<4
 	// output must be from -8192 to 8191
-	return hp.next(outsig) << 4;
-	
 }
 
 

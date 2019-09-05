@@ -25,12 +25,12 @@
 #define LED 3
 #define SWITCH1 4	// delay pre/post filter
 #define SWITCH2 7	// filter mode (LOWPASS, HIGHPASS)
-#define KNOB1 2		// Delay
-#define KNOB2 3		// LFO Rate (modulation?)
-#define KNOB3 4		// Amount (distortion, feedback, modulation)
-#define KNOB4 5		// Filter freq (resonance ?)
-#define KNOB5 6		// LFO Wave
-#define KNOB6 7		// Distotion/FX types
+#define KNOB1 A2		// Delay
+#define KNOB2 A3		// LFO Rate (modulation?)
+#define KNOB3 A4		// Amount (distortion, feedback, modulation)
+#define KNOB4 A5		// Filter freq (resonance ?)
+#define KNOB5 A6		// LFO Wave
+#define KNOB6 A1		// Distotion/FX types
 
 // SYNTH 
 #define CONTROL_RATE 64
@@ -41,8 +41,8 @@
 #define MXOR 3		// XOR ^
 #define MNOT 4		// NOT ~
 #define MSHIFT 5	// bitshift left
-#define MRND1 6		// updateAudio random bitshift
-#define MRND2 7		// updateControl random bitshift
+#define MRND1 6		// control-rate random bitshift
+#define MRND2 7		// audio-rate random bitshift
 // filter
 #define LOWESTFREQ 128 // 128 works well 
 #define HIGHESTHPFREQ 3008 // higher values (ex: 4096) cause weird things :) 
