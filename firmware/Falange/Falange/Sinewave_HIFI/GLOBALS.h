@@ -43,7 +43,6 @@
 
 // SYNTH 
 #define CONTROL_RATE 64
-#define MAXDELAY 256 // ArduinoProMini max delay = 256 samples
 // distortion modes
 #define MOFF 0		// off 
 #define MAND 1		// AND &
@@ -54,13 +53,16 @@
 #define MRND1 6		// audio-rate random bitshift
 #define MRND2 7		// lfo distortion bitshift
 
-#define RNDSHIFT 16
+#define RNDSHIFT 16 // value used in rnd shifts
 // filter
 #define LOWESTFREQ 128 // 128 works well 
 #define HIGHESTHPFREQ 3008 // higher values (ex: 4096) cause weird things :) 
 #define HIGHESTLPFREQ 3072
 #define LOWESTRES 255
 #define HIGHESTRES 1
-
+// delay
+#define MAXDELAY 256 // ArduinoProMini max delay = 256 samples
+#define FBKMIN -64
+#define FBKMAX 63
 
 #endif /* GLOBALS_H_ */

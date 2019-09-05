@@ -45,25 +45,30 @@ AudioDelayFeedback <MAXDELAY> fbkDelay;
 /* VARIABLES                                                            */
 /************************************************************************/
 // FILTER
-bool filtermode = 0; // 0=LP, 1=HP
-Q16n0 freq; // cutoff
+bool switch2 = 0; // 0=LP, 1=HP
+Q16n0 freqknob; // cutoff
 Q0n8 res;
 const IntMap lpFreqMap(0, 255, LOWESTFREQ, HIGHESTLPFREQ);
 const IntMap hpFreqMap(0, 255, LOWESTFREQ, HIGHESTHPFREQ); // filter freq mapping
 const IntMap hpResMap(255, 0, LOWESTRES, HIGHESTRES);
 
 // DELAY
-uint16_t delaytime;
-int8_t amount; 
-int8_t lfosig; 
+uint16_t delaysize;
+uint16_t delaymod; 
+int8_t delayfbk; 
 
 // DISTORTION
 uint8_t distortion_mode; // 0 to 7 (see SYNTH distortion modes in GLOBALS.h)
 uint8_t rnd; 
 
 // LFO
+int8_t lfosig;
 uint8_t lfowave = 0; 
 uint8_t lforate; 
+
+// MOD
+bool switch1 = false;
+int8_t modknob; 
 
 /************************************************************************/
 /* SETUP                                                                */
@@ -83,9 +88,7 @@ void setup(){
 	hp.setResonance(127); // 0 to 255, 0 is the "sharp" end
 	// DELAY
 	fbkDelay.setFeedbackLevel(-111); // can be -128 to 127
-	// LFO
-	
-		
+	// LFO	
 }
 
 /************************************************************************/
@@ -94,27 +97,27 @@ void setup(){
 void updateControl(){
 	// DISTORTION 
 	distortion_mode = mozziAnalogRead(KNOB6) >> 7; // read knob (0..7)
-		 
+	// MOD
+	modknob = mozziAnalogRead(KNOB3) >> 2;
+	// DELAY
+	delaysize = (1023 - (mozziAnalogRead(KNOB1) ) >> 2);
+	delayfbk = modknob - 128;
+	(delayfbk < FBKMIN) ? (delayfbk = FBKMIN) : 
+	(delayfbk > FBKMAX) ? (delayfbk = FBKMAX) : delayfbk;
+	delayfbk = delayfbk << 1;
+	fbkDelay.setFeedbackLevel(delayfbk); // can be -128 to 127
+	
 	// FILTER
-	filtermode = bit_get(PIND, BIT(7));		// read SWITCH2
-	freq =  mozziAnalogRead(KNOB4) >> 2;	// read knob
-	lp.setCentreFreq( lpFreqMap(freq) );	// set LP freq
-	hp.setCentreFreq( hpFreqMap(freq) );	// set HP freq
+	switch2 = bit_get(PIND, BIT(SWITCH2));		// read SWITCH2
+	freqknob =  mozziAnalogRead(KNOB4) >> 2;	// read knob
+	lp.setCentreFreq( lpFreqMap(freqknob) );	// set LP freq
+	hp.setCentreFreq( hpFreqMap(freqknob) );	// set HP freq
 	/*res = 255 - (mozziAnalogRead(KNOB3) >> 2);// read pot
 	lp.setResonance( res );			// set LP res
 	hp.setResonance( hpResMap(res) );		// set HP res */
-	
-	// DELAY
-	//delayplace = bit_get(PIND, BIT(4));		// read SWITCH1
-	delaytime = (1023 - (mozziAnalogRead(KNOB1) ) >> 2);
-	
-	// MOD AMOUNT 
-	amount = (mozziAnalogRead(KNOB3) >> 2) - 128;
-	fbkDelay.setFeedbackLevel(amount); // can be -128 to 127
-	
+		
 	// LFO
 	//float rate = ipow( mozziAnalogRead(KNOB2), 2) / 8176.0078125;
-	//lfo.setFreq( rate );
 	lforate = mozziAnalogRead(KNOB2) >> 4;
 	lfowave = mozziAnalogRead(KNOB5) >> 7;  
 	lfo1.setFreq(lforate);
@@ -126,6 +129,8 @@ void updateControl(){
 	lfo6.setPhase(rand(128));
 	sah.setFreq(lforate);
 	
+	// MOD
+	switch1 = bit_get(PIND, BIT(SWITCH1));		// read SWITCH2	
 }
 /************************************************************************/
 /* UPDATE AUDIO                                                         */
@@ -141,12 +146,15 @@ int updateAudio(){
 	(lfowave < 5) ? ( lfosig = lfo5.next() ) :
 	(lfowave < 6) ? ( (sah.next()<1) ? (lfosig = lfo5.next()):(lfosig = lfosig)) : (lfosig = lfosig);
 	
-	
+	// test signal (put audio in here...)
 	int outsig = testosc.next()>>1; // divide by half to avoid svf distortion on high Q
 	
-	(delaytime > 0) ? (outsig = (outsig + fbkDelay.next(outsig, delaytime)) >> 1) : outsig;
-	
-	(filtermode < 1) ? (outsig = lp.next(outsig)) : (outsig = hp.next(outsig));
+	// delay modulation
+	(switch1 > 0) ? (delaymod = (lfosig * delaysize) >> 7) : (delaymod = delaysize);
+	// turn delay on/off
+	(delaysize > 0) ? (outsig = (outsig + fbkDelay.next(outsig, delaymod)) >> 1) : outsig;
+	// apply LP or HP filter
+	(switch2 < 1) ? (outsig = lp.next(outsig)) : (outsig = hp.next(outsig));
 	
 
 	// faster "switch statement" (cascading if then else)
