@@ -47,7 +47,9 @@ AudioDelayFeedback <256> fbkDelay;
 bool filtermode = 0; // 0=LP, 1=HP
 Q16n0 freq; // cutoff
 Q0n8 res;
-const IntMap freqMap(0, 255, LOWESTFREQ, HIGHESTFREQ); // filter freq mapping
+const IntMap lpFreqMap(0, 255, LOWESTFREQ, HIGHESTLPFREQ);
+const IntMap hpFreqMap(0, 255, LOWESTFREQ, HIGHESTHPFREQ); // filter freq mapping
+const IntMap hpResMap(255, 0, LOWESTRES, HIGHESTRES);
 
 // DELAY
 bool delayplace = 0; // 0 = post fx+filter, 1 = pre fx+filter
@@ -57,8 +59,6 @@ int8_t lfosig;
 
 // DISTORTION
 uint8_t distortion_mode; // 0 to 7 (see SYNTH distortion modes in GLOBALS.h)
-uint8_t pot_samples[4];
-uint8_t counter = 0; 
 
 /************************************************************************/
 /* SETUP                                                                */
@@ -87,30 +87,22 @@ void setup(){
 /* UPDATE CONTROL                                                       */
 /************************************************************************/
 void updateControl(){
-	// DISTORTION (pot is noisy....should be replaced or filtered)
-	pot_samples[counter] = mozziAnalogRead(KNOB6) >> 7; // read knob (0..7)
-	counter++; 
-	if (counter > 3){ // after 4 samples calculate pot value 
-		counter = 0;
-		distortion_mode = 0; 
-		for (int i = 0; i < 4; i++)
-		{
-			distortion_mode += pot_samples[i];
-		}
-		distortion_mode = distortion_mode >> 2; 
-	} 
+	// DISTORTION 
+	distortion_mode = mozziAnalogRead(KNOB6) >> 7; // read knob (0..7)
 		 
 	// FILTER
-	delayplace = bit_get(PIND, BIT(4));		// read SWITCH2
 	filtermode = bit_get(PIND, BIT(7));		// read SWITCH2
-	freq =  mozziAnalogRead(KNOB4) >> 2;			// read knob
-	hp.setCentreFreq( freqMap(freq) );	// set HP freq
-	//lopass.setCutoffFreq( freq >> 2 );		// set LP freq
-	lp.setCentreFreq( freqMap(freq) );
-	res = 255 - (mozziAnalogRead(KNOB3) >> 2);
-	lp.setResonance( res );
+	freq =  mozziAnalogRead(KNOB4) >> 2;	// read knob
+	
+	lp.setCentreFreq( lpFreqMap(freq) );	// set LP freq
+	hp.setCentreFreq( hpFreqMap(freq) );	// set HP freq
+	res = 255 - (mozziAnalogRead(KNOB3) >> 2);// read pot
+	lp.setResonance( res );			// set LP res
+	hp.setResonance( hpResMap(res) );		// set HP res
+	
 	
 	// DELAY
+	delayplace = bit_get(PIND, BIT(4));		// read SWITCH1
 	delaytime = (1023 - (mozziAnalogRead(KNOB1) ) >> 2) + 1;
 	//fbkDelay.setDelayTimeCells(delaytime);
 	
@@ -148,7 +140,7 @@ int updateAudio(){
 	*/
 	
 	// output must be from -8192 to 8191
-	return lp.next(outsig) << 4;
+	return hp.next(outsig) << 4;
 	
 }
 
