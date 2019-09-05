@@ -139,6 +139,10 @@ void updateControl(){
 /* UPDATE AUDIO                                                         */
 /************************************************************************/
 int updateAudio(){
+	// test signal (put audio in here...)
+	//int outsig = testosc.next()>>1; // divide by half to avoid svf distortion on high Q
+	int outsig = (getAudioInput() -512) >> 3;
+	
 	// LFO 
 	lfosig = lfo1.next(); 
 	lightled( lfosig ); // LED
@@ -147,17 +151,23 @@ int updateAudio(){
 	(lfowave < 3) ? ( lfosig = lfo3.next() ) :
 	(lfowave < 4) ? ( lfosig = lfo4.next() ) :
 	(lfowave < 5) ? ( lfosig = lfo5.next() ) :
-	(lfowave < 6) ? ( (sah.next()<1) ? (lfosig = lfo5.next()):(lfosig = lfosig)) : (lfosig = lfosig);
-	
-	// test signal (put audio in here...)
-	int outsig = testosc.next()>>1; // divide by half to avoid svf distortion on high Q
-	
+	(lfowave < 6) ? ( 
+		(sah.next() < 1) ? (lfosig = lfo5.next()) : (lfosig)
+		) :
+	(lfowave < 7) ? (
+		(sah.next() < 1) ? (lfosig = (outsig + 128) >> 1) : (lfosig)
+	) :
+	(lfowave < 7) ? (
+		(sah.next() < 1) ? (lfosig = (255 - (outsig + 128)) >> 1) : (lfosig)
+	) : lfosig;
+		
+	// SIGNAL CHAIN: Filter > Delay > FX 
+	// apply LP or HP filter
+	(switch2 < 1) ? (outsig = lp.next(outsig)) : (outsig = hp.next(outsig));
 	// delay modulation
 	(switch1 > 0) ? (delaymod = (lfosig * delaysize) >> 7) : (delaymod = delaysize);
 	// turn delay on/off
 	(delaysize > 0) ? (outsig = (outsig + fbkDelay.next(outsig, delaymod)) >> 1) : outsig;
-	// apply LP or HP filter
-	(switch2 < 1) ? (outsig = lp.next(outsig)) : (outsig = hp.next(outsig));
 	
 
 	// faster "switch statement" (cascading if then else)
