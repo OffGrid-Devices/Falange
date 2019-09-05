@@ -2,12 +2,12 @@
 #define LED 3
 #define SWITCH1 4
 #define SWITCH2 7
-#define KNOB1 2
-#define KNOB2 3
-#define KNOB3 4
-#define KNOB4 5
-#define KNOB5 6
-#define KNOB6 7
+#define KNOB1 A2
+#define KNOB2 A3
+#define KNOB3 A4
+#define KNOB4 A5
+#define KNOB5 A6
+#define KNOB6 A1
 
 int counter = 0; // counter to blink led
 
