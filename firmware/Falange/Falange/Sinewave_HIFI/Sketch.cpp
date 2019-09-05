@@ -54,7 +54,6 @@ const IntMap hpFreqMap(0, 255, LOWESTFREQ, HIGHESTHPFREQ); // filter freq mappin
 const IntMap hpResMap(255, 0, LOWESTRES, HIGHESTRES);
 
 // DELAY
-bool delayplace = 0; // 0 = post fx+filter, 1 = pre fx+filter
 uint16_t delaytime;
 int8_t amount; 
 int8_t lfosig; 
@@ -103,9 +102,8 @@ void updateControl(){
 	hp.setResonance( hpResMap(res) );		// set HP res */
 	
 	// DELAY
-	delayplace = bit_get(PIND, BIT(4));		// read SWITCH1
+	//delayplace = bit_get(PIND, BIT(4));		// read SWITCH1
 	delaytime = (1023 - (mozziAnalogRead(KNOB1) ) >> 2) + 1;
-	//fbkDelay.setDelayTimeCells(delaytime);
 	
 	// MOD AMOUNT 
 	amount = (mozziAnalogRead(KNOB3) >> 2) - 128;
@@ -117,7 +115,6 @@ void updateControl(){
 	lfo.setFreq( mozziAnalogRead(KNOB2) >> 4);
 	
 	// DISTORTION 
-	if(distortion_mode == MRND2) rnd = rand(RNDSHIFT); 
 	
 }
 /************************************************************************/
@@ -130,7 +127,7 @@ int updateAudio(){
 	
 	int outsig = testosc.next()>>1; // divide by half to avoid svf distortion on high Q
 	
-	(delayplace < 1) ? (outsig = (outsig + fbkDelay.next(outsig, delaytime)) >> 1) : outsig;
+	outsig = (outsig + fbkDelay.next(outsig, delaytime)) >> 1;
 	
 	(filtermode < 1) ? (outsig = lp.next(outsig)) : (outsig = hp.next(outsig));
 	
@@ -172,7 +169,6 @@ int updateAudio(){
 		break;
 	}*/
 	
-	(delayplace > 0) ? (outsig = ( outsig + fbkDelay.next( outsig, delaytime ) ) >> 1) : outsig;
 	
 	return outsig << 4; // <<4
 	// output must be from -8192 to 8191
