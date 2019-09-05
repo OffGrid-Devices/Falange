@@ -16,15 +16,6 @@
 #include <LowPassFilter.h>
 #include <AudioDelayFeedback.h>
 
-#include <tables/sin256_int8.h>
-#include <tables/triangle512_int8.h>
-#include <tables/saw256_int8.h>
-#include <tables/phasor256_int8.h>
-#include <tables/square_no_alias512_int8.h>
-#include <tables/brownnoise8192_int8.h>
-#include <tables/uphasor256_uint8.h>
-#include <tables/whitenoise8192_int8.h>
-
 //Beginning of Auto generated function prototypes by Atmel Studio
 void updateControl();
 int updateAudio();
@@ -139,7 +130,7 @@ int updateAudio(){
 	(distortion_mode < MNOT) ? (outsig = (outsig ^ lfosig)) : // XOR
 	(distortion_mode < MSHIFT) ? (outsig = (outsig + ~lfosig)) : // NOT
 	(distortion_mode < MRND1) ? (outsig = (outsig << lfosig)) : // BITSHIFT
-	(distortion_mode < MRND2) ? (outsig = (outsig << rand(RNDSHIFT))) : (outsig = (distortions(outsig, (lfosig + 128)>>5 ))); // CTRL RATE else AUDIO RATE
+	(distortion_mode < MRND2) ? (outsig = ( (outsig << rand(RNDSHIFT))>>7 )) : (outsig = (distortions(outsig, (lfosig + 128)>>5 ))); // CTRL RATE else AUDIO RATE
 	
 	
 	/*switch(distortion_mode){
@@ -168,8 +159,7 @@ int updateAudio(){
 		default:
 		break;
 	}*/
-	
-	
+		
 	return outsig << 4; // <<4
 	// output must be from -8192 to 8191
 }
@@ -195,7 +185,7 @@ void lightled(int8_t sig){
 
 int distortions(int sig, uint8_t dist){
 	// faster "switch statement" (cascading if then else)
-	(dist < 1) ? (sig = sig << rand(RNDSHIFT)) : // rnd distortion
+	(dist < 1) ? (sig = (sig << rand(RNDSHIFT)) >> 7) : // rnd distortion
 	(dist < 2) ? (sig = sig) : // OFF
 	(dist < 3) ? sig = (sig & -lfosig) : // AND
 	(dist < 4) ? sig = (sig | lfosig) : // OR
