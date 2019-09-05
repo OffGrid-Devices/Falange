@@ -42,8 +42,8 @@
 #define MXOR 3		// XOR ^
 #define MNOT 4		// NOT ~
 #define MSHIFT 5	// bitshift left
-#define MRND1 6		// control-rate random bitshift
-#define MRND2 7		// audio-rate random bitshift
+#define MRND1 6		// audio-rate random bitshift
+#define MRND2 7		// lfo distortion bitshift
 
 #define RNDSHIFT 16
 // filter

@@ -30,6 +30,7 @@ void updateControl();
 int updateAudio();
 
 void lightled(int8_t sig);
+int distortions(int sig, uint8_t dist);
 //End of Auto generated function prototypes by Atmel Studio
 
 /************************************************************************/
@@ -136,12 +137,15 @@ int updateAudio(){
 
 	// faster "switch statement" (cascading if then else)
 	(distortion_mode < MAND) ? (outsig = outsig) : // OFF
-	(distortion_mode < MOR) ? outsig = (outsig & -lfosig) : // AND 
-	(distortion_mode < MXOR) ? outsig = (outsig | lfosig) : // OR
-	(distortion_mode < MNOT) ? outsig = (outsig ^ lfosig) : // XOR
-	(distortion_mode < MSHIFT) ? outsig = (outsig + ~lfosig) : // NOT
-	(distortion_mode < MRND1) ? outsig = (outsig << lfosig) : // BITSHIFT
-	(distortion_mode < MRND2) ? outsig = (outsig << rnd) : outsig = ( outsig << rand(RNDSHIFT) ); // CTRL RATE else AUDIO RATE
+	(distortion_mode < MOR) ? (outsig = (outsig & -lfosig)) : // AND 
+	(distortion_mode < MXOR) ? (outsig = (outsig | lfosig)) : // OR
+	(distortion_mode < MNOT) ? (outsig = (outsig ^ lfosig)) : // XOR
+	(distortion_mode < MSHIFT) ? (outsig = (outsig + ~lfosig)) : // NOT
+	(distortion_mode < MRND1) ? (outsig = (outsig << lfosig)) : // BITSHIFT
+	(distortion_mode < MRND2) ? (outsig = (outsig << rand(RNDSHIFT))) : 
+	(lfosig>0) ? (outsig = (distortions(outsig, (lfosig + 128)>>5 ))) : outsig; // CTRL RATE else AUDIO RATE
+	
+	
 	/*switch(distortion_mode){
 		case MAND:
 		outsig = outsig & -lfosig;
@@ -192,4 +196,17 @@ void lightled(int8_t sig){
 	
 	// METHOD 3
 	//PORTD = (filtermode<<PD3);
+}
+
+int distortions(int sig, uint8_t dist){
+	// faster "switch statement" (cascading if then else)
+	(dist < 1) ? (sig = sig << rand(RNDSHIFT)) : // rnd distortion
+	(dist < 2) ? (sig = sig) : // OFF
+	(dist < 3) ? sig = (sig & -lfosig) : // AND
+	(dist < 4) ? sig = (sig | lfosig) : // OR
+	(dist < 5) ? sig = (sig ^ lfosig) : // XOR
+	(dist < 6) ? sig = (sig + ~lfosig) : // NOT
+	(dist < 7) ? sig = (sig << lfosig) : sig; // BITSHIFT
+	
+	return sig; 
 }
