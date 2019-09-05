@@ -112,7 +112,10 @@ void updateControl(){
 	freqknob =  mozziAnalogRead(KNOB4) >> 2;	// read knob
 	lp.setCentreFreq( lpFreqMap(freqknob) );	// set LP freq
 	hp.setCentreFreq( hpFreqMap(freqknob) );	// set HP freq
-	/*res = 255 - (mozziAnalogRead(KNOB3) >> 2);// read pot
+	
+	res = modknob;
+	(res > 128) ? (res = 127 - res) : res;  
+	res = res << 1;
 	lp.setResonance( res );			// set LP res
 	hp.setResonance( hpResMap(res) );		// set HP res */
 		
