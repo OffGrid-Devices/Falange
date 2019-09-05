@@ -40,7 +40,7 @@ Oscil <SIN256_NUM_CELLS, AUDIO_RATE> lfo(SIN256_DATA);
 //LowPassFilter lp;
 StateVariable <LOWPASS> lp; // can be LOWPASS, BANDPASS, HIGHPASS or NOTCH
 StateVariable <HIGHPASS> hp; // can be LOWPASS, BANDPASS, HIGHPASS or NOTCH
-AudioDelayFeedback <256> fbkDelay;
+AudioDelayFeedback <MAXDELAY> fbkDelay;
 /************************************************************************/
 /* VARIABLES                                                            */
 /************************************************************************/
@@ -95,28 +95,28 @@ void updateControl(){
 	// FILTER
 	filtermode = bit_get(PIND, BIT(7));		// read SWITCH2
 	freq =  mozziAnalogRead(KNOB4) >> 2;	// read knob
-	
 	lp.setCentreFreq( lpFreqMap(freq) );	// set LP freq
 	hp.setCentreFreq( hpFreqMap(freq) );	// set HP freq
 	/*res = 255 - (mozziAnalogRead(KNOB3) >> 2);// read pot
 	lp.setResonance( res );			// set LP res
 	hp.setResonance( hpResMap(res) );		// set HP res */
 	
-	
 	// DELAY
 	delayplace = bit_get(PIND, BIT(4));		// read SWITCH1
 	delaytime = (1023 - (mozziAnalogRead(KNOB1) ) >> 2) + 1;
-	fbkDelay.setDelayTimeCells(delaytime);
+	//fbkDelay.setDelayTimeCells(delaytime);
 	
 	// MOD AMOUNT 
 	amount = (mozziAnalogRead(KNOB3) >> 2) - 128;
 	fbkDelay.setFeedbackLevel(amount); // can be -128 to 127
+	
 	// LFO
 	//float rate = ipow( mozziAnalogRead(KNOB2), 2) / 8176.0078125;
 	//lfo.setFreq( rate );
 	lfo.setFreq( mozziAnalogRead(KNOB2) >> 4);
+	
 	// DISTORTION 
-	if(distortion_mode == MRND2) rnd = rand(16); 
+	if(distortion_mode == MRND2) rnd = rand(RNDSHIFT); 
 	
 }
 /************************************************************************/
@@ -129,7 +129,10 @@ int updateAudio(){
 	
 	int outsig = testosc.next()>>1; // divide by half to avoid svf distortion on high Q
 	
-	outsig = lp.next(outsig);
+	(delayplace < 1) ? (outsig = (outsig + fbkDelay.next(outsig, delaytime)) >> 1) : outsig;
+	
+	(filtermode < 1) ? (outsig = lp.next(outsig)) : (outsig = hp.next(outsig));
+	
 
 	// faster "switch statement" (cascading if then else)
 	(distortion_mode < MAND) ? (outsig = outsig) : // OFF
@@ -138,7 +141,7 @@ int updateAudio(){
 	(distortion_mode < MNOT) ? outsig = (outsig ^ lfosig) : // XOR
 	(distortion_mode < MSHIFT) ? outsig = (outsig + ~lfosig) : // NOT
 	(distortion_mode < MRND1) ? outsig = (outsig << lfosig) : // BITSHIFT
-	(distortion_mode < MRND2) ? outsig = (outsig << rnd) : outsig = ( outsig << rand(16) ); // CTRL RATE else AUDIO RATE
+	(distortion_mode < MRND2) ? outsig = (outsig << rnd) : outsig = ( outsig << rand(RNDSHIFT) ); // CTRL RATE else AUDIO RATE
 	/*switch(distortion_mode){
 		case MAND:
 		outsig = outsig & -lfosig;
@@ -166,11 +169,11 @@ int updateAudio(){
 		break;
 	}*/
 	
-	outsig = ( outsig + fbkDelay.next( outsig ) ) >> 1;
-	return outsig << 6; // <<4
+	(delayplace > 0) ? (outsig = ( outsig + fbkDelay.next( outsig, delaytime ) ) >> 1) : outsig;
+	
+	return outsig << 4; // <<4
 	// output must be from -8192 to 8191
 }
-
 
 void loop(){
   audioHook(); // required here
