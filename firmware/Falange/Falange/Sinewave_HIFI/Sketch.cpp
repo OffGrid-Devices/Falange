@@ -142,8 +142,7 @@ int updateAudio(){
 	(distortion_mode < MNOT) ? (outsig = (outsig ^ lfosig)) : // XOR
 	(distortion_mode < MSHIFT) ? (outsig = (outsig + ~lfosig)) : // NOT
 	(distortion_mode < MRND1) ? (outsig = (outsig << lfosig)) : // BITSHIFT
-	(distortion_mode < MRND2) ? (outsig = (outsig << rand(RNDSHIFT))) : 
-	(lfosig>0) ? (outsig = (distortions(outsig, (lfosig + 128)>>5 ))) : outsig; // CTRL RATE else AUDIO RATE
+	(distortion_mode < MRND2) ? (outsig = (outsig << rand(RNDSHIFT))) : (outsig = (distortions(outsig, (lfosig + 128)>>5 ))); // CTRL RATE else AUDIO RATE
 	
 	
 	/*switch(distortion_mode){
