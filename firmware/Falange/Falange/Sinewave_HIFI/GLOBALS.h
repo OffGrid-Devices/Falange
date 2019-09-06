@@ -42,7 +42,7 @@
 #include <tables/uphasor256_uint8.h> // for the s&h
 
 // SYNTH 
-#define CONTROL_RATE 64
+#define CONTROL_RATE 64 // min=64 beacause of Q24n8
 // distortion modes
 #define MOFF 0		// off 
 #define MAND 1		// AND &

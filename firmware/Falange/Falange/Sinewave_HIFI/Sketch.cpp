@@ -47,7 +47,7 @@ AudioDelayFeedback <MAXDELAY> fbkDelay;
 // FILTER
 bool switch2 = 0; // 0=LP, 1=HP
 Q16n0 freqknob; // cutoff
-Q0n8 res;
+uint8_t res;
 const IntMap lpFreqMap(0, 255, LOWESTFREQ, HIGHESTLPFREQ);
 const IntMap hpFreqMap(0, 255, LOWESTFREQ, HIGHESTHPFREQ); // filter freq mapping
 const IntMap hpResMap(255, 0, LOWESTRES, HIGHESTRES);
@@ -64,7 +64,8 @@ uint8_t rnd;
 // LFO
 int8_t lfosig;
 uint8_t lfowave = 0; 
-uint8_t lforate; 
+//uint8_t lforate; 
+Q24n8 lforate; 
 
 // MOD
 bool switch1 = false;
@@ -76,7 +77,7 @@ int8_t modknob;
 void setup(){
 	startMozzi(CONTROL_RATE); // uses the default control rate of 64, defined in mozzi_config.h  
 	setupFastAnalogRead(FASTEST_ADC);
-	
+	randomSeed(analogRead(A0));
 	// HARDWARE
 	pinMode(SWITCH1, INPUT);
 	pinMode(SWITCH2, INPUT);
@@ -121,16 +122,17 @@ void updateControl(){
 		
 	// LFO
 	//float rate = ipow( mozziAnalogRead(KNOB2), 2) / 8176.0078125;
-	lforate = mozziAnalogRead(KNOB2) >> 4;
 	lfowave = mozziAnalogRead(KNOB5) >> 7;  
-	lfo1.setFreq(lforate);
-	lfo2.setFreq(lforate);
-	lfo3.setFreq(lforate);
-	lfo4.setFreq(lforate);
-	lfo5.setFreq(lforate);
-	lfo6.setFreq(1);
+	lforate = mozziAnalogRead(KNOB2) >> 4;
+	lforate = ipow(mozziAnalogRead(KNOB2)>>3, 2);
+	lfo1.setFreq_Q24n8(lforate);
+	lfo2.setFreq_Q24n8(lforate);
+	lfo3.setFreq_Q24n8(lforate);
+	lfo4.setFreq_Q24n8(lforate);
+	lfo5.setFreq_Q24n8(lforate);
+	lfo6.setFreq_Q24n8(lforate);
 	lfo6.setPhase(rand(128));
-	sah.setFreq(lforate);
+	sah.setFreq_Q24n8(lforate);
 	
 	// MOD
 	switch1 = bit_get(PIND, BIT(SWITCH1));		// read SWITCH2	
@@ -220,7 +222,7 @@ void loop(){
 /************************************************************************/
 void lightled(int8_t sig){
 	// METHOD 1
-	(sig > 0) ? PORTD |=(1<<3) : PORTD &= ~(1 << 3);
+	(sig > 0) ? PORTD |=(1<<LED) : PORTD &= ~(1 << LED);
 	
 	// METHOD 2
 	/*if (sig > 0) PORTD |=(1<<3);
